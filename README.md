@@ -14,7 +14,27 @@ A TypeScript project for automating interactions with the Arbox API, including s
    ```
    npm install
    ```
-3. Build the project:
+3. Create a `.env` file in the root directory based on the `.env.example` template:
+   ```
+   cp .env.example .env
+   ```
+4. Edit the `.env` file with your Arbox credentials and desired configuration:
+   ```
+   # Arbox API credentials
+   ARBOX_EMAIL=your-email@example.com
+   ARBOX_PASSWORD=your-password
+   ARBOX_WHITELABEL=Arbox
+
+   # Scheduling configuration
+   ARBOX_CRON=0 8 * * 0-3,6
+   ARBOX_CLASS_TIME=08:00
+   ARBOX_DAYS_FROM_NOW=1
+   ```
+5. Test your environment variable setup:
+   ```
+   npm run test-env
+   ```
+6. Build the project:
    ```
    npm run build
    ```
@@ -24,10 +44,18 @@ A TypeScript project for automating interactions with the Arbox API, including s
 ### Basic API Usage
 
 ```typescript
-import { ArboxApi } from './src/arboxApi';
+import { ArboxAPI } from './src/arboxAPI';
+import * as dotenv from 'dotenv';
 
-// Initialize the API with your credentials
-const api = new ArboxApi('your-email@example.com', 'your-password');
+// Load environment variables
+dotenv.config();
+
+// Initialize the API with credentials from environment variables
+const api = new ArboxAPI(
+  process.env.ARBOX_EMAIL || '',
+  process.env.ARBOX_PASSWORD || '',
+  process.env.ARBOX_WHITELABEL || ''
+);
 
 // Login to get authentication token
 const userProfile = await api.login();
@@ -53,34 +81,47 @@ console.log(`Found ${scheduleData.data.length} classes`);
 The Scheduler class allows you to schedule tasks to run at specific times, such as logging in or signing up for classes.
 
 ```typescript
-import { ArboxApi } from './src/arboxApi';
+import { ArboxAPI } from './src/arboxAPI';
 import { Scheduler } from './src/scheduler';
+import { ArboxTasks } from './src/arboxTasks';
+import * as dotenv from 'dotenv';
 
-// Initialize the API with your credentials
-const api = new ArboxApi('your-email@example.com', 'your-password');
+// Load environment variables
+dotenv.config();
+
+// Initialize the API with credentials from environment variables
+const api = new ArboxAPI(
+  process.env.ARBOX_EMAIL || '',
+  process.env.ARBOX_PASSWORD || '',
+  process.env.ARBOX_WHITELABEL || ''
+);
+
+// Create tasks handler
+const tasks = new ArboxTasks(api);
 
 // Create a scheduler with Israel timezone (default)
-const scheduler = new Scheduler(api);
+const scheduler = new Scheduler();
 
 // Create a login task
-const loginTask = scheduler.createLoginTask();
+const loginTask = tasks.createLoginTask();
 
 // Schedule the login task to run at 8:00 AM Israel time every day
-const dailyMorningCron = Scheduler.timeToExpression(8, 0);
+const dailyMorningCron = process.env.ARBOX_CRON || '0 8 * * *';
 const loginTaskId = scheduler.scheduleTask(dailyMorningCron, loginTask);
 
-// Create a class signup task (placeholder for future implementation)
-const classId = 12345; // Replace with actual class ID
-const signupTask = scheduler.createClassSignupTask(classId);
+// Create a class signup task
+const classTime = process.env.ARBOX_CLASS_TIME || '08:00';
+const daysFromNow = parseInt(process.env.ARBOX_DAYS_FROM_NOW || '1', 10);
+const signupTask = tasks.createClassSignupTask(classTime, daysFromNow);
 
-// Schedule the signup task to run at 8:05 AM Israel time every day
-const fiveMinutesLaterCron = Scheduler.timeToExpression(8, 5);
+// Schedule the signup task to run at a different time
+const fiveMinutesLaterCron = '5 8 * * *';
 const signupTaskId = scheduler.scheduleTask(fiveMinutesLaterCron, signupTask);
 
 // List all scheduled tasks
-const tasks = scheduler.listTasks();
+const scheduledTasks = scheduler.listTasks();
 console.log('Scheduled tasks:');
-tasks.forEach(task => {
+scheduledTasks.forEach(task => {
     console.log(`- ${task.id}: ${task.name}`);
 });
 

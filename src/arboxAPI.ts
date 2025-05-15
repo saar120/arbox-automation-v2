@@ -3,9 +3,6 @@ import {ScheduleResponse} from "./types/scheduleInfo";
 import {ApiResponse, UserProfile} from "./types/userInfo";
 
 
-const hyper = "HYPR-training";
-const arbox = "Arbox";
-
 
 /**
  * Interface for schedule between dates request
@@ -22,7 +19,7 @@ export interface ScheduleBetweenDatesRequest {
  */
 export class ArboxAPI {
     private baseUrl = 'https://apiappv2.arboxapp.com';
-    private whitelabel = arbox
+    private whitelabel: string;
     private email: string;
     private password: string;
     private token: string | null = null;
@@ -34,9 +31,10 @@ export class ArboxAPI {
      * @param email - User's email address
      * @param password - User's password
      */
-    constructor(email: string, password: string) {
+    constructor(email: string, password: string, whitelabel: string) {
         this.email = email;
         this.password = password;
+        this.whitelabel = whitelabel;
     }
 
     /**
@@ -206,6 +204,26 @@ export class ArboxAPI {
         const response = await this.request<ApiResponse>('/api/v2/user/profile', options);
         return response.data;
 
+
+    }
+
+
+    /**
+     * Signs the user up for a class
+     * @param scheduleId - ID of the class to sign up for
+     * @param membershipId - ID of the membership to use
+     * @returns Response data from the sign-up request
+     */
+    public async signToClass(scheduleId: number, membershipId: number): Promise<any> {
+        const options: RequestInit = {
+            method: 'POST',
+            body: JSON.stringify({
+                schedule_id: scheduleId,
+                membership_user_id: membershipId
+            })
+        };
+
+        return this.request<any>('/api/v2/scheduleUser/insert', options);
 
     }
 }

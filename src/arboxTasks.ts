@@ -1,5 +1,6 @@
-import { ArboxAPI } from './arboxAPI';
-import { ScheduledTask } from './scheduler';
+import {ArboxAPI} from './arboxAPI';
+import {ScheduledTask} from './scheduler';
+import {addHours, format, startOfHour} from 'date-fns';
 
 /**
  * Creates Arbox-specific tasks that can be scheduled
@@ -36,12 +37,12 @@ export class ArboxTasks {
 
     /**
      * Creates a placeholder for a future class signup task
-     * @param classId - ID of the class to sign up for
+     * @param  classTime - The time of the class to sign up for
      * @returns A task that will sign up for a class (placeholder)
      */
-    public createClassSignupTask(classId: number): ScheduledTask {
+    public createClassSignupTask(classTime: string, daysFromNow: number): ScheduledTask {
         return {
-            name: `Sign up for class ${classId}`,
+            name: `Sign up for class ${classTime}`,
             action: async () => {
                 // Ensure we're logged in first
                 if (!this.api.isLoggedIn()) {
@@ -49,10 +50,36 @@ export class ArboxTasks {
                     await this.api.login();
                 }
 
-                // This is a placeholder for the actual signup implementation
-                console.log(`[PLACEHOLDER] Signing up for class ${classId}`);
-                // In the future, this would call an API method like:
-                // await this.api.signUpForClass(classId);
+                const userProfile = await this.api.getProfile();
+
+                const now = new Date();
+                const to = addHours(now, 25 * daysFromNow);
+
+
+                const {data} = await this.api.getScheduleBetweenDates(
+                    now.toISOString(),
+                    to.toISOString(),
+                    userProfile.users_boxes[0].locations_box.id,
+                    userProfile.users_boxes[0].box.id,
+                )
+
+                // find class tommorow class by date and time "08:00" "2025-01-01"
+                const classToSign = data.find((c) => {
+                    const dateStr = format(to, 'yyyy-MM-dd');
+                    return c.time === classTime && c.date === dateStr;
+                })
+
+                if (!classToSign) {
+                    console.log(`No class found for ${classTime}`);
+                    return;
+                }
+
+
+                // log relevant class details
+                console.log(`Sign in to ${classTime}`);
+                console.log(`free spots ${classToSign.free}`);
+                console.log(`booked users ${classToSign.booked_users?.length}`);
+                console.log(`status ${classToSign.status}`);
             }
         };
     }
